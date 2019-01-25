@@ -32,7 +32,7 @@ def main_routine(arg,c,start_time):
 		l0 = L//2 - 5
 		l1 = L//2 + 6
 	
-	save_data = True
+	save_data = False
 	indx = np.zeros(L)
 	for i in range (L//2):
 		indx[2*i] = i
@@ -58,7 +58,7 @@ def main_routine(arg,c,start_time):
 			#	CC_0[j,k] =(1/L)*np.exp(1j*np.pi*(k-j)*0.5)*(np.exp(1j*np.pi*j)-1)*(np.exp(-1j*np.pi*k)-1)/ \
 			#			((np.exp(1j*np.pi*j*2/L)-1)*(np.exp(-1j*np.pi*k*2/L)-1))
 			
-	print(func.is_hermitian(CC_0))
+	#print(func.is_hermitian(CC_0))
 
 	#Initialize the storage matrices
 	T = [dt*n for n in range(nT)]
@@ -80,7 +80,7 @@ def main_routine(arg,c,start_time):
 		mu_array = np.random.uniform(-1.0*mu0,mu0,L)
 		m_Einf[k] = 2**(L-1)*np.sum(mu_array)
 		for i in range(nT):
-			print (100.*i/nT)
+			#print (100.*i/nT)
 			#Calculate Hamiltonian			 
 			phi_hop =A*np.cos(w*T[i])
 			
@@ -122,7 +122,7 @@ def main_routine(arg,c,start_time):
 	'''
 	# recv_S = None
 	# recv_eigCC = None
-	# recv_nbar = None
+	recv_nbar = None
 	# recv_imbalance = None
 	# recv_current = None
 	recv_energy = None
@@ -133,7 +133,7 @@ def main_routine(arg,c,start_time):
 	if mpi_rank == 0:
 		# recv_S = np.empty([mpi_size,num_mu0,nT])
 		# recv_eigCC = np.empty([mpi_size,num_mu0,nT,l1-l0])
-		# recv_nbar = np.empty([mpi_size,num_mu0,nT])
+		recv_nbar = np.empty([mpi_size,num_mu0,nT])
 		# recv_imbalance = np.empty([mpi_size,num_mu0,nT])
 		# recv_current = np.empty([mpi_size,num_mu0,nT,L])
 		recv_energy = np.empty([mpi_size,num_mu0,nT])
@@ -143,7 +143,7 @@ def main_routine(arg,c,start_time):
 		recv_Einf = np.empty([mpi_size,num_mu0])
 	# c.Gather(m_S,recv_S,root=0)
 	# c.Gather(m_eigCC, recv_eigCC,root=0)
-	# c.Gather(m_nbar,recv_nbar,root=0)
+	c.Gather(m_nbar,recv_nbar,root=0)
 	# c.Gather(m_imbalance,recv_imbalance,root=0)
 	# c.Gather(m_current,recv_current,root=0)
 	c.Gather(m_energy,recv_energy,root=0)
@@ -152,15 +152,11 @@ def main_routine(arg,c,start_time):
 	# c.Gather(m_subsystem,recv_subsystem,root=0)
 	c.Gather(m_Einf,recv_Einf,root=0)
 	if mpi_rank == 0:
-		#save data
-		# print(-2/np.tan(np.pi/L),recv_energy[0,0,0])
-		# plt.semilogy(T,recv_energy[0,0,:]-recv_energy[0,0,0])
-		# plt.semilogy(T,recv_energy[1,0,:]-recv_energy[1,0,0])
-		# plt.show()
+		print(np.allclose(m_nbar,0.5*L*np.ones((mpi_size,num_mu0,nT)))) 
 		if save_data == True:
 			# np.save(fname+"entropy.npy",recv_S)
 			# np.save(fname+"CCspectrum.npy",recv_eigCC)
-			# np.save(fname+"nbar.npy",recv_nbar)
+			np.save(fname+"nbar.npy",recv_nbar)
 			# np.save(fname+"imbalance.npy",recv_imbalance)
 			# np.save(fname+"current.npy",recv_current)
 			np.save(fname+"energy.npy",recv_energy)
@@ -180,6 +176,7 @@ if __name__ == '__main__':
 	rank = comm.Get_rank()
 	start_time = time.time()
 	if rank==0:
+
 		## parsing at rank =0
 		parser = argparse.ArgumentParser(
 				  description='Time evolution of fermion chain',
