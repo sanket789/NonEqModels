@@ -1,0 +1,54 @@
+\documentclass[a4paper, oneside,10pt]{article}
+\usepackage[a4paper,top=3cm,bottom=3cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{lipsum}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{mwe}
+\usepackage{times}
+\usepackage{xcolor}
+%\usepackage{booktabs}
+\usepackage{float}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{amsmath}
+%\usepackage{subfig}
+\newcommand{\eq}[2]{\begin{equation} \label{eq:#1} #2 \end{equation}}
+
+\usepackage[backend=biber,
+    style=numeric,sorting=none]{biblatex}
+\addbibresource{ref.bib}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+}
+\graphicspath{{Figures/}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\title{Formulae for Codes}
+\maketitle
+\begin{enumerate}
+\item The Hamiltonian of system is 
+\eq{}{H = -J\sum_{n=1}^L \ [\ e^{-i\phi(t)} c_n^\dagger c_{n+1} \ + \ e^{i\phi(t)} c_{n+1}^\dagger c_n ] \ + \ \sum_{n=1}^L \mu_n c_n^\dagger c_n \ }
+where $\sigma = \frac{1+\sqrt{5}}{2}$
+\item Aubry-Andre-harper quasi-periodic potential is given by
+\eq{}{\mu_n = \mu_0 \cos{(2\pi\sigma n + \alpha)} }
+
+\item Pierel's phase is given by
+
+\subitem For sinusoidal electrical field
+\eq{}{\phi(t) = \frac{A}{L}\sin{\omega t} }
+\subitem For time-independent and space-independent constant field
+\eq{}{\phi(t) = \frac{A}{L}t}
+\item Entropy is given as 
+\eq{}{S(t) = -\sum_\alpha[(1-n_\alpha)\ln{(1-n_\alpha)} + n_\alpha \ln{n_\alpha}]}
+where $n_\alpha$ are eigenvalues of subsystem correlation matrices
+\item The time evolution is given as, where $D_{jk}$ is $j^{th}$ component of $k^{th}$ eigenvector of single particle Hamiltonian
+\eq{}{U(t) = D^*(e^{-i\epsilon t})D^T}
+\eq{}{C(t) = U^\dagger C(0) U}
+\item The charge current in system is given by
+\eq{}{\langle j(t) \rangle = iJ(e^{i\phi(t)}C_{n,n-1}(t) \ - \ e^{-i\phi (t)}C_{n-1,n})}
+\end{enumerate}
+\end{document}
