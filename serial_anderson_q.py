@@ -16,10 +16,10 @@ start_time = time.time()
 L = 10
 J = 1.0
 mu0 = 5.0
-A = 0.001
+A = 1.
 w = 0.5
 dt = 0.001
-tf = 100.0
+tf = 10.0
 nT = int(tf/dt)
 save_data = True
 #initialize correlation matrix to the ground state of clean Hamiltonian at t=0
@@ -30,35 +30,34 @@ for i in range(L//2):
 
 #Initialize the storage matrices
 T = np.linspace(0.0,tf,nT)
-fname = "WDIR/CORR_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_"%(L,A,w,mu0,1,tf,dt)
+fname = "WDIR/SER_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_"%(L,A,w,mu0,1,tf,dt)
 
 m_energy = np.zeros(nT)
 m_nbar = np.zeros(nT)
-m_corr = np.zeros(nT)
+m_corr = np.zeros((nT,L))
 m_spectrum = np.zeros((nT,L))
 # m_deln = np.zeros((num_mu0,L))
 # m_Einf = np.zeros((num_mu0))
 #Loop over nT
 
 CC_t = CC_0.copy()
-mu_array = mu0*np.ones(L)#np.random.uniform(-1.0*mu0,mu0,L)
+mu_array = np.load("WDIR/QUSPIN_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_mu.npy"%(L,A,w,mu0,1,tf,dt))
 # print(mu_array[p,0,0])
 for i in range(nT):
 	#Calculate Hamiltonian	
-	m_corr[i] = CC_t[0,0].real		 
+	if i%100==0:
+		print('t = %g'%(i*dt))	 
 	phi_hop = A*np.cos(w*T[i])	
 	
 	HH = func.ham_anderson_insl_PBC(L,J,phi_hop,mu_array)
-	if i==0:
-		for j in range(L):
-			for k in range(L):
-				pass# print(repr(HH[j,k]))
+	
 	if not func.is_hermitian(HH):
 		print(HH)
 	#Calculate energy
 	m_energy[i] = np.sum(np.multiply(HH,CC_t)).real
 	#Calculate occupation of subsystem
 	diagonal = np.diag(CC_t).real
+	m_corr[i,:] = diagonal.copy()
 	m_nbar[i] = np.sum(diagonal)
 	# print(repr(m_nbar[i]))
 	#Time evolution of correlation matrix. Refer readme for formulae
@@ -85,5 +84,33 @@ if save_data == True:
 	# np.save(fname+"spectrum.npy",m_spectrum)
 	print('Data files saved successfully.')
 	print('Filename : ',fname)
-end_time = time.time()
+EE_q = np.load("WDIR/QUSPIN_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_energy.npy"%(L,A,w,mu0,1,tf,dt))
+cc_q = np.load("WDIR/QUSPIN_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_corr.npy"%(L,A,w,mu0,1,tf,dt))
 
+plt.plot(T,(EE_q - m_energy))
+plt.title('Error in energy')
+plt.xlabel('time')
+plt.ylabel('E_q - E_ser')
+# plt.savefig('WDIR/energy_error_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_.png'%(L,A,w,mu0,1,tf,dt))
+plt.show()
+
+for k in range(L):
+	plt.plot(T,(cc_q[:,k] - m_corr[:,k]),label='%d'%k)
+	plt.xlabel('time')
+	plt.ylabel('E_q - E_ser')
+plt.title('Error in correlators')
+plt.legend()
+# plt.savefig('WDIR/energy_error_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_.png'%(L,A,w,mu0,1,tf,dt))
+plt.show()
+
+end_time = time.time()
+print("Simulation Done. Time taken : ",(end_time - start_time)," seconds")
+# print(repr(m_energy[-1]))
+enrgy_correlator_1 = np.zeros(nT)
+enrgy_correlator_2 = np.zeros(nT)
+for i in range(nT):
+	enrgy_correlator_1[i] = np.sum(np.multiply(cc_q[i,:],mu_array))
+	enrgy_correlator_2[i] = np.sum(np.multiply(m_corr[i,:],mu_array))
+
+plt.plot(T,(enrgy_correlator_1 - enrgy_correlator_2))
+plt.show()
