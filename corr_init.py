@@ -25,4 +25,4 @@ def ground_state(L,HH):
 	AA = np.zeros((L,L),dtype=complex)	
 	eigval,eigvec = np.linalg.eigh(HH)
 	AA = np.dot(np.conj(eigvec)[:,0:L//2],eigvec.T[0:L//2,:])
-
+	return AA
