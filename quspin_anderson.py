@@ -25,9 +25,9 @@ L = 10
 J = 1.0
 mu0 = 5.0
 A = 1.
-w = 0.5
+w = 0.25
 dt = 0.001
-tf = 10.0
+tf = 100.0
 nT = int(tf/dt)	
 
 fname = "WDIR/QUSPIN_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_"%(L,A,w,mu0,1,tf,dt)
@@ -40,7 +40,7 @@ def drive_hc(t,A,w):
 # drive protocol parameters
 drive_args=[A,w]
 ##### construct single-particle Hamiltonian #####
-mu_array = mu0*np.ones(L)#np.random.uniform(-1*mu0,mu0,L)
+mu_array = np.random.uniform(-1*mu0,mu0,L)
 
 # define site-coupling lists
 hopping=[[-J,i,(i+1)%L] for i in range(L)]

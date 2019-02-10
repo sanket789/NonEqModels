@@ -17,11 +17,12 @@ L = 10
 J = 1.0
 mu0 = 5.0
 A = 1.
-w = 0.5
-dt = 0.001
-tf = 10.0
+w = 0.25
+dt = 0.0001
+tf = 100.0
 nT = int(tf/dt)
 save_data = True
+tol = 1E-3
 #initialize correlation matrix to the ground state of clean Hamiltonian at t=0
 
 CC_0 = np.zeros((L,L),dtype=complex)
@@ -44,6 +45,7 @@ CC_t = CC_0.copy()
 mu_array = np.load("WDIR/QUSPIN_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_mu.npy"%(L,A,w,mu0,1,tf,dt))
 # print(mu_array[p,0,0])
 for i in range(nT):
+	# print(CC_t)
 	#Calculate Hamiltonian	
 	if i%100==0:
 		print('t = %g'%(i*dt))	 
@@ -65,14 +67,20 @@ for i in range(nT):
 	# m_spectrum[i,:] =np.linalg.eigvalsh(HH)
 	EE = np.diag(np.exp(-1j*dt*v_eps))
 	UU = np.dot(np.conj(DD),np.dot(EE,DD.T))
-	# if i==0:
-	# 	EE2 = np.diag(np.exp(-1j*tf*v_eps))
-	# 	UU_2 = np.dot(np.conj(DD),np.dot(EE2,DD.T))
-	# 	CC_2 = np.dot(np.conj(UU_2.T),np.dot(CC_t,UU_2))
+	if i==nT-1:
+		print('EE ',(np.where(np.absolute(EE)<tol)[1].size)*100/L**2,'%')
+		print('DD ',(np.where(np.absolute(DD)<tol)[1].size)*100/L**2,'%')
+		print('EE*DD.T ',(np.where(np.absolute(np.dot(EE,DD.T))<tol)[1].size)*100/L**2,'%')	
+		print('UU ',(np.where(np.absolute(UU)<tol)[1].size)*100/L**2,'%')
+
+		print('---------------------------------------------')
+	
 	CC_next = np.dot(np.conj(UU.T),np.dot(CC_t,UU))
 	CC_t = CC_next.copy()
 	# print (repr(m_spectrum[i,-1]))
-
+# plt.plot(range(L),np.absolute(DD[:,0]))
+# plt.plot(range(L),np.absolute(DD[:,-1]))
+# plt.show()
 print('--------------------------------------')
 print("Constant total number opeartor = ",np.allclose(m_nbar,0.5*L*np.ones(np.shape(m_nbar))),0.5*L)
 print('--------------------------------------')
@@ -84,33 +92,46 @@ if save_data == True:
 	# np.save(fname+"spectrum.npy",m_spectrum)
 	print('Data files saved successfully.')
 	print('Filename : ',fname)
+plt.plot(T,m_energy)
+plt.title('Energy dt = %g'%dt)
+plt.xlabel('time')
+plt.ylabel('energy')
+plt.savefig('WDIR/energy_dt_%g_A_%g_w_%g_.png'%(dt,A,w))
+plt.show()
+###########################################################################
+#
+#	Plot the data for comparison
+#
+###########################################################################
+
 EE_q = np.load("WDIR/QUSPIN_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_energy.npy"%(L,A,w,mu0,1,tf,dt))
 cc_q = np.load("WDIR/QUSPIN_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_corr.npy"%(L,A,w,mu0,1,tf,dt))
-
-plt.plot(T,(EE_q - m_energy))
-plt.title('Error in energy')
+print(min(abs(m_energy)))
+plt.plot(T,(EE_q - m_energy)/m_energy)
+plt.title('Error in energy dt = %g'%dt)
 plt.xlabel('time')
 plt.ylabel('E_q - E_ser')
-# plt.savefig('WDIR/energy_error_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_.png'%(L,A,w,mu0,1,tf,dt))
+plt.savefig('WDIR/rel_energy_error_dt_%g_.png'%(dt))
 plt.show()
 
 for k in range(L):
-	plt.plot(T,(cc_q[:,k] - m_corr[:,k]),label='%d'%k)
+	plt.plot(T,(cc_q[:,k] - m_corr[:,k])/m_corr[:,k],label='%d'%k)
 	plt.xlabel('time')
-	plt.ylabel('E_q - E_ser')
-plt.title('Error in correlators')
+	#plt.ylabel('E_q - E_ser')
+plt.title('Error in correlators dt = %g'%dt)
 plt.legend()
-# plt.savefig('WDIR/energy_error_L_%d_A_%g_w_%g_mu0_%g_num_%d_tf_%g_dt_%g_.png'%(L,A,w,mu0,1,tf,dt))
+plt.savefig('WDIR/rel_corr_error_dt_%g_.png'%(dt))
 plt.show()
 
 end_time = time.time()
 print("Simulation Done. Time taken : ",(end_time - start_time)," seconds")
-# print(repr(m_energy[-1]))
-enrgy_correlator_1 = np.zeros(nT)
-enrgy_correlator_2 = np.zeros(nT)
-for i in range(nT):
-	enrgy_correlator_1[i] = np.sum(np.multiply(cc_q[i,:],mu_array))
-	enrgy_correlator_2[i] = np.sum(np.multiply(m_corr[i,:],mu_array))
 
-plt.plot(T,(enrgy_correlator_1 - enrgy_correlator_2))
-plt.show()
+# print(repr(m_energy[-1]))
+# enrgy_correlator_1 = np.zeros(nT)
+# enrgy_correlator_2 = np.zeros(nT)
+# for i in range(nT):
+# 	enrgy_correlator_1[i] = np.sum(np.multiply(cc_q[i,:],mu_array))
+# 	enrgy_correlator_2[i] = np.sum(np.multiply(m_corr[i,:],mu_array))
+
+# plt.plot(T,(enrgy_correlator_1 - enrgy_correlator_2))
+# plt.show()
