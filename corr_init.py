@@ -16,13 +16,12 @@ def left_spatial_occ(L):
 		AA[j,j] = 1.0
 	return AA
 
-def ground_state(L,HH):
+def ground_state(num,HH):
 	'''
 		Initial state is the ground state of the Hamiltonian.
-			L	:	number o sites
+			num	:	number of particles
 			HH	: 	The Hamiltonian at time t=0
 	'''
-	AA = np.zeros((L,L),dtype=complex)	
 	eigval,eigvec = np.linalg.eigh(HH)
-	AA = np.dot(np.conj(eigvec)[:,0:L//2],eigvec.T[0:L//2,:])
+	AA = np.dot(np.conj(eigvec)[:,0:num],eigvec.T[0:num,:])
 	return AA

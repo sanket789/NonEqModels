@@ -65,7 +65,7 @@ print(np.allclose(CC_0,CC_1))
 print(np.sum(np.multiply(ham,CC_0)).real, -2/np.tan(np.pi/L))
 print(np.sum(np.multiply(ham,CC_1)).real, -2/np.tan(np.pi/L))
 print(np.sum(np.diag(CC_0).real),np.sum(np.diag(CC_1).real))
-# print(np.allclose(np.sum(np.diag(CC_0,1)),np.sum(np.diag(CC_1,1))))
+#print(np.allclose(np.sum(np.diag(CC_0,1)),np.sum(np.diag(CC_1,1))))
 ind = [0,1,-1,2]
 DD1 = np.zeros((L,L),dtype=complex)
 for m in range(L):

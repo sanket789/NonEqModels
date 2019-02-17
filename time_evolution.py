@@ -1,6 +1,6 @@
 import numpy as np
 
-def evolve_correlation_matrix(dt,CC_init,v_eps,DD):
+def evolve_correlation_matrix(dt,CC_init,v_eps,DD,check=False):
 	'''
 		Time evolution of correlation matrix from t=t0 to tf=dt. Please refer to the readme file for the detailed formula.
 		Input:
@@ -9,11 +9,12 @@ def evolve_correlation_matrix(dt,CC_init,v_eps,DD):
 			v_eps	:	eigenspectrum of the Hamiltonian under which unitary evolution is performed
 			DD 		:	The column DD[:, i] is the normalized eigenvector corresponding to the eigenvalue v_eps[i]
 	'''
-	
+
 	EE = np.diag(np.exp(-1j*dt*v_eps))
 	UU = np.dot(np.conj(DD),np.dot(EE,DD.T))
 	CC_next = np.dot(np.conj(UU.T),np.dot(CC_init,UU))
-	if not np.allclose(np.trace(CC_next.real) ,L//2):
-		print('WARNING: The evolution of system is out of half filled subspace!')
+	if check == True:
+		if not np.allclose(np.trace(CC_next.real) ,np.shape(CC_init)[0]//2):
+			print('WARNING: The evolution of system is out of half filled subspace!')
 
 	return CC_next
