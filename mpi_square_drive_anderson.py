@@ -40,10 +40,11 @@ def main_routine(arg,c):
 	HH_start = ham(J,dJ,L,np.zeros(L))
 	CC_0 = ground_state(L//2,HH_start)
 	#Initialize the storage matrices
-	fname = "Data/SQ_ANDERSON_L_%d_dJ_%g_mu0_%g_T_%g_cyc_%d_ncnf_%g_"%(L,dJ,mu0,T,cyc,num_conf*mpi_size)
+	fname = "WDIR/Feb17/Data/SQ_ANDERSON_L_%d_dJ_%g_mu0_%g_T_%g_cyc_%d_ncnf_%g_"%(L,dJ,mu0,T,cyc,num_conf*mpi_size)
 	m_energy = np.zeros((num_conf,nT))
 	m_nbar = np.zeros((num_conf,nT))
-	m_diag = np.zeros((num_conf,nT,L))
+	m_imb = np.zeros((num_conf,nT))
+	m_absb_energy = np.zeros((num_conf,nT))
 	'''
 		#########################################  Loop over configurations and time  ##############################################
 	'''
@@ -66,33 +67,39 @@ def main_routine(arg,c):
 		for i in range(nT):
 			#Calculate Hamiltonian
 			m_nbar[k,i] = np.trace(CC_t).real		 
-			m_diag[k,i,:] = np.diag(CC_t).real
+			m_imb[k,i] = func.imbalance(np.diag(CC_t).real)
 			if i%2 == 0:
-				m_energy[k,i] = np.sum(np.multiply(HH_h,CC_t)).real				
+				m_energy[k,i] = np.sum(np.multiply(HH_h,CC_t)).real	
+				m_absb_energy[k,i] = (m_energy[k,i] - m_energy[k,0])			
 				CC_next = np.dot(np.conj(UU_h.T),np.dot(CC_t,UU_h))
 			else:
 				m_energy[k,i] = np.sum(np.multiply(HH_l,CC_t)).real
+				m_absb_energy[k,i] = (m_energy[k,i] - m_energy[k,0])
 				CC_next = np.dot(np.conj(UU_l.T),np.dot(CC_t,UU_l))
 			CC_t = CC_next.copy()
+		m_absb_energy[k,:] = m_absb_energy[k,:]/(0.5*m_energy[k,-1]+0.5*m_energy[k,-2]-m_energy[k,0])
 	'''
 		############################	Gather the data to be saved 	##################################################
 	'''
 	recv_energy = None
 	recv_nbar = None
-	recv_diag = None
+	recv_imb = None
+	recv_absb_energy = None
 	if mpi_rank	== 0:
 		recv_energy = np.empty([mpi_size,num_conf,nT])
 		recv_nbar = np.empty([mpi_size,num_conf,nT])
-		recv_diag = np.empty([mpi_size,num_conf,nT,L])
+		recv_imb = np.empty([mpi_size,num_conf,nT])
+		recv_absb_energy = np.empty([mpi_size,num_conf,nT])
 	c.Gather(m_energy,recv_energy,root=0)
 	c.Gather(m_nbar,recv_nbar,root=0)
-	c.Gather(m_diag,recv_diag,root=0)
+	c.Gather(m_imb,recv_imb,root=0)
+	c.Gather(m_absb_energy,recv_absb_energy,root=0)
 	if mpi_rank	== 0:
 		if save_data == True:
 			np.save(fname+"energy.npy",recv_energy)
 			np.save(fname+"nbar.npy",recv_nbar)
-			np.save(fname+"diag.npy",recv_diag)
-
+			np.save(fname+"imb.npy",recv_imb)
+			np.save(fname+"absb.npy",recv_imb)
 	end_time = time.time()
 	print('Time taken by rank %d : %g seconds'%(mpi_rank,end_time - start_time))
 '''

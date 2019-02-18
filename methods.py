@@ -150,6 +150,14 @@ def charge_current(J,phi,AA):
 	return curr
 
 
-
-
-	
+def imbalance(diag):
+	'''
+		Calculate (n_even-n_odd)/(n_even+n_odd)
+		Input: 
+			diag 	: 	Diagonal of Correlation matrix
+		
+	'''
+	L = np.size(diag)
+	n_even = np.sum(diag[range(0,L,2)])
+	n_odd = np.sum(diag[range(1,L,2)])
+	return (n_even-n_odd)/(n_even+n_odd)
