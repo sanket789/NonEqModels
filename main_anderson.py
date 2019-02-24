@@ -32,7 +32,7 @@ def main_routine(arg,c,start_time):
 		l0 = L//2 - 5
 		l1 = L//2 + 6
 	
-	save_data = False
+	save_data = True
 	indx = np.zeros(L)
 	for i in range (L//2):
 		indx[2*i] = i
@@ -42,9 +42,11 @@ def main_routine(arg,c,start_time):
 	
 	#initialize correlation matrix to the ground state of clean Hamiltonian at t=0
 	CC_0 = np.zeros((L,L),dtype=complex)
-	HH0 = func.ham_anderson_insl_PBC(L,J,A,np.zeros(L))
+	mu_ground = mu0*np.ones(L)
+	HH0 = func.ham_anderson_insl_PBC(L,J,A,mu_ground)
 	eps0,DD0 = np.linalg.eigh(HH0)
 	CC_0 = np.dot(np.conj(DD0)[:,0:L//2],DD0.T[0:L//2,:])
+	E_init = np.sum(np.multiply(HH0,CC_0)).real
 	#for p in range(L):
 	#	for q in range(L):
 	#		CC_0[p,q] = (1./L)*sum([np.exp(-1j*2*np.pi*indx[n]*(p-q)/L) for n in range(L//2)])
@@ -62,23 +64,29 @@ def main_routine(arg,c,start_time):
 
 	#Initialize the storage matrices
 	T = [dt*n for n in range(nT)]
-	fname = "WDIR/L_100/Jan23/AND_L_%d_A_%g_w_%g_mu0_%g_num_%d_cycles_%g_samples_%g_"%(L,A,w,mu0,NUM_CONF,num_cyc,num_samp)
+	fname = "WDIR/MPI_L_%d_A_%g_w_%g_mu0_%g_num_%d_cycles_%g_samples_%g_"%(L,A,w,mu0,NUM_CONF,num_cyc,num_samp)
 	num_mu0 = NUM_CONF//mpi_size
-	m_S = np.zeros((num_mu0,nT))
-	m_eigCC = np.zeros((num_mu0,nT,l1-l0))
+	# m_S = np.zeros((num_mu0,nT))
+	# m_eigCC = np.zeros((num_mu0,nT,l1-l0))
 	m_energy = np.zeros((num_mu0,nT))
 	m_nbar = np.zeros((num_mu0,nT))
-	m_imbalance = np.zeros((num_mu0,nT))
-	m_current = np.zeros((num_mu0,nT,L))
-	m_nn_site = np.zeros((num_mu0,nT))
-	m_subsystem = np.zeros((num_mu0,nT,l1-l0,l1-l0),dtype=complex)
-	m_deln = np.zeros((num_mu0,L))
-	m_Einf = np.zeros((num_mu0))
+	# m_imbalance = np.zeros((num_mu0,nT))
+	# m_current = np.zeros((num_mu0,nT,L))
+	# m_nn_site = np.zeros((num_mu0,nT))
+	# m_subsystem = np.zeros((num_mu0,nT,l1-l0,l1-l0),dtype=complex)
+	# m_deln = np.zeros((num_mu0,L))
+	# m_Einf = np.zeros((num_mu0))
+	m_mu = np.zeros((num_mu0,L))
+	print(mpi_rank)
+	node_id = mpi_rank*np.ones(2)
 	#Loop over nT
 	for k in range(num_mu0):
 		CC_t = CC_0.copy()
 		mu_array = np.random.uniform(-1.0*mu0,mu0,L)
-		m_Einf[k] = 2**(L-1)*np.sum(mu_array)
+		# print(mu_array[0])
+		m_mu[k,:] = mu_array.copy()
+		# m_Einf[k] = 2**(L-1)*np.sum(mu_ground)
+			
 		for i in range(nT):
 			#print (100.*i/nT)
 			#Calculate Hamiltonian			 
@@ -86,23 +94,23 @@ def main_routine(arg,c,start_time):
 			
 			HH = func.ham_anderson_insl_PBC(L,J,phi_hop,mu_array)
 			#Calculate entropy
-			m_subsystem[k,i,:]=CC_t[l0:l1,l0:l1]
-			entropy, spectrum = func.vonNeumann_entropy(CC_t[l0:l1,l0:l1])
-			m_S[k,i] = entropy
-			m_eigCC[k,i,:] = spectrum.copy()
+			# m_subsystem[k,i,:]=CC_t[l0:l1,l0:l1]
+			# entropy, spectrum = func.vonNeumann_entropy(CC_t[l0:l1,l0:l1])
+			# m_S[k,i] = entropy
+			# m_eigCC[k,i,:] = spectrum.copy()
 			#Calculate energy
 			m_energy[k,i] = np.sum(np.multiply(HH,CC_t)).real
 			#Calculate occupation of subsystem
 			diagonal = np.diag(CC_t).real
 			m_nbar[k,i] = np.sum(diagonal)
 			#Calculate imbalance in entire system
-			n_e = np.sum(diagonal[range(0,L,2)])	#at position 0,2,4, ... ,L-1
-			n_o = np.sum(diagonal[range(1,L,2)])	#at position 1,3,5 ...
-			m_imbalance[k,i] = (n_e-n_o)/(n_e+n_o)
+			# n_e = np.sum(diagonal[range(0,L,2)])	#at position 0,2,4, ... ,L-1
+			# n_o = np.sum(diagonal[range(1,L,2)])	#at position 1,3,5 ...
+			# m_imbalance[k,i] = (n_e-n_o)/(n_e+n_o)
 			#Calculate current
-			m_current[k,i,:] = func.charge_current(J,phi_hop,CC_t)
+			# m_current[k,i,:] = func.charge_current(J,phi_hop,CC_t)
 			#Calculate onsite occupation	
-			m_nn_site[k,i] = CC_t[L//2,L//2].real
+			# m_nn_site[k,i] = CC_t[L//2,L//2].real
 			
 			#Time evolution of correlation matrix. Refer readme for formulae
 			v_eps , DD = np.linalg.eigh(HH)
@@ -110,11 +118,11 @@ def main_routine(arg,c,start_time):
 			UU = np.dot(np.conj(DD),np.dot(EE,DD.T))
 			CC_next = np.dot(np.conj(UU.T),np.dot(CC_t,UU))
 			CC_t = CC_next.copy()
-		for m in range(L):
-			if eps0[m] < 0:
-				m_deln[k,m] = 1.0 - np.dot(DD0.T,np.dot(CC_t,np.conj(DD0)))[m,m].real
-			else:
-				m_deln[k,m] = np.dot(DD0.T,np.dot(CC_t,np.conj(DD0)))[m,m].real 
+		# for m in range(L):
+		# 	if eps0[m] < 0:
+		# 		m_deln[k,m] = 1.0 - np.dot(DD0.T,np.dot(CC_t,np.conj(DD0)))[m,m].real
+		# 	else:
+		# 		m_deln[k,m] = np.dot(DD0.T,np.dot(CC_t,np.conj(DD0)))[m,m].real 
 		
 
 	'''
@@ -128,8 +136,10 @@ def main_routine(arg,c,start_time):
 	recv_energy = None
 	# recv_nn_site = None
 	# recv_subsystem = None
-	recv_deln = None
-	recv_Einf = None
+	# recv_deln = None
+	# recv_Einf = None
+	recv_mu = None
+	recv_id = None
 	if mpi_rank == 0:
 		# recv_S = np.empty([mpi_size,num_mu0,nT])
 		# recv_eigCC = np.empty([mpi_size,num_mu0,nT,l1-l0])
@@ -138,9 +148,11 @@ def main_routine(arg,c,start_time):
 		# recv_current = np.empty([mpi_size,num_mu0,nT,L])
 		recv_energy = np.empty([mpi_size,num_mu0,nT])
 		# recv_nn_site = np.empty([mpi_size,num_mu0,nT])
-		recv_deln = np.empty([mpi_size,num_mu0,L])
+		# recv_deln = np.empty([mpi_size,num_mu0,L])
 		# recv_subsystem = np.empty([mpi_size,num_mu0,nT,l1-l0,l1-l0],dtype=complex)
-		recv_Einf = np.empty([mpi_size,num_mu0])
+		# recv_Einf = np.empty([mpi_size,num_mu0])
+		recv_mu = np.empty([mpi_size,num_mu0,L])
+		recv_id = np.empty([mpi_size,2])
 	# c.Gather(m_S,recv_S,root=0)
 	# c.Gather(m_eigCC, recv_eigCC,root=0)
 	c.Gather(m_nbar,recv_nbar,root=0)
@@ -148,11 +160,18 @@ def main_routine(arg,c,start_time):
 	# c.Gather(m_current,recv_current,root=0)
 	c.Gather(m_energy,recv_energy,root=0)
 	# c.Gather(m_nn_site,recv_nn_site,root=0)
-	c.Gather(m_deln,recv_deln,root=0)
+	# c.Gather(m_deln,recv_deln,root=0)
 	# c.Gather(m_subsystem,recv_subsystem,root=0)
-	c.Gather(m_Einf,recv_Einf,root=0)
+	# c.Gather(m_Einf,recv_Einf,root=0)
+	c.Gather(m_mu,recv_mu,root=0)
+	c.Gather(node_id,recv_id,root=0)
 	if mpi_rank == 0:
-		print(np.allclose(m_nbar,0.5*L*np.ones((mpi_size,num_mu0,nT)))) 
+		print(recv_id)
+		# print('--------------------------------------')
+		# print("Constant total number opeartor = ",np.allclose(recv_nbar,0.5*L*np.ones(np.shape(recv_nbar))),0.5*L)
+		# print()
+		# print("Energy is constant = ",np.allclose(recv_energy,E_init*np.ones((mpi_size,num_mu0,nT))),E_init) 
+		# print('--------------------------------------')
 		if save_data == True:
 			# np.save(fname+"entropy.npy",recv_S)
 			# np.save(fname+"CCspectrum.npy",recv_eigCC)
@@ -161,9 +180,10 @@ def main_routine(arg,c,start_time):
 			# np.save(fname+"current.npy",recv_current)
 			np.save(fname+"energy.npy",recv_energy)
 			# np.save(fname+"nn_site.npy",recv_nn_site)
-			np.save(fname+"deln.npy",recv_deln)
+			# np.save(fname+"deln.npy",recv_deln)
 			# np.save(fname+"subsystem.npy",recv_subsystem)
-			np.save(fname+"Einf.npy",recv_Einf)
+			# np.save(fname+"Einf.npy",recv_Einf)
+			np.save(fname+"mu.npy",recv_mu)
 			print('Data files saved successfully.')
 			print('Filename : ',fname)
 		end_time = time.time()

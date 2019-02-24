@@ -99,7 +99,7 @@ def main_routine(arg,c):
 			np.save(fname+"energy.npy",recv_energy)
 			np.save(fname+"nbar.npy",recv_nbar)
 			np.save(fname+"imb.npy",recv_imb)
-			np.save(fname+"absb.npy",recv_imb)
+			np.save(fname+"absb.npy",recv_absb_energy)
 	end_time = time.time()
 	print('Time taken by rank %d : %g seconds'%(mpi_rank,end_time - start_time))
 '''
