@@ -45,6 +45,8 @@ def main_routine(arg,c):
 	m_nbar = np.zeros((num_conf,nT))
 	m_imb = np.zeros((num_conf,nT))
 	m_absb_energy = np.zeros((num_conf,nT))
+	m_diag = np.zeros((num_conf,nT,L))
+	m_curr = np.zeros((num_conf,nT,L))
 	'''
 		#########################################  Loop over configurations and time  ##############################################
 	'''
@@ -68,13 +70,16 @@ def main_routine(arg,c):
 			#Calculate Hamiltonian
 			m_nbar[k,i] = np.trace(CC_t).real		 
 			m_imb[k,i] = func.imbalance(np.diag(CC_t).real)
+			m_diag[k,i,:] = np.diag(CC_t).real
 			if i%2 == 0:
 				m_energy[k,i] = np.sum(np.multiply(HH_h,CC_t)).real	
 				m_absb_energy[k,i] = (m_energy[k,i] - m_energy[k,0])			
+				m_curr[k,i,:] = func.charge_current(J+dJ,0.,CC_t)
 				CC_next = np.dot(np.conj(UU_h.T),np.dot(CC_t,UU_h))
 			else:
 				m_energy[k,i] = np.sum(np.multiply(HH_l,CC_t)).real
 				m_absb_energy[k,i] = (m_energy[k,i] - m_energy[k,0])
+				m_curr[k,i,:] = func.charge_current(J-dJ,0.,CC_t)
 				CC_next = np.dot(np.conj(UU_l.T),np.dot(CC_t,UU_l))
 			CC_t = CC_next.copy()
 		m_absb_energy[k,:] = m_absb_energy[k,:]/(0.5*m_energy[k,-1]+0.5*m_energy[k,-2]-m_energy[k,0])
@@ -85,21 +90,31 @@ def main_routine(arg,c):
 	recv_nbar = None
 	recv_imb = None
 	recv_absb_energy = None
+	recv_diag = None
+	recv_curr = None
 	if mpi_rank	== 0:
 		recv_energy = np.empty([mpi_size,num_conf,nT])
 		recv_nbar = np.empty([mpi_size,num_conf,nT])
 		recv_imb = np.empty([mpi_size,num_conf,nT])
 		recv_absb_energy = np.empty([mpi_size,num_conf,nT])
+		recv_diag = np.empty([mpi_size,num_conf,nT,L])
+		recv_curr = np.empty([mpi_size,num_conf,nT,L])
 	c.Gather(m_energy,recv_energy,root=0)
 	c.Gather(m_nbar,recv_nbar,root=0)
 	c.Gather(m_imb,recv_imb,root=0)
 	c.Gather(m_absb_energy,recv_absb_energy,root=0)
+	c.Gather(m_diag,recv_diag,root=0)
+	c.Gather(m_curr,recv_curr,root=0)
 	if mpi_rank	== 0:
+		recv_diag = np.mean(recv_diag,(0,1))
+		recv_curr = np.mean(recv_curr,(0,1))
 		if save_data == True:
 			np.save(fname+"energy.npy",recv_energy)
 			np.save(fname+"nbar.npy",recv_nbar)
 			np.save(fname+"imb.npy",recv_imb)
 			np.save(fname+"absb.npy",recv_absb_energy)
+			np.save(fname+"diag.npy",recv_diag)
+			np.save(fname+"curr.npy",recv_curr)
 	end_time = time.time()
 	print('Time taken by rank %d : %g seconds'%(mpi_rank,end_time - start_time))
 '''
@@ -123,6 +138,7 @@ if __name__ == '__main__':
 		parser.add_argument("-cyc","--cyc",help="Number of drive cycles",default=100,type=int,nargs='?')
 		#-- add in the argument
 		args=parser.parse_args()
+		print(args)
 
 	else:
 		args = None
