@@ -139,11 +139,13 @@ if __name__ == '__main__':
 				  description='Time evolution of fermion chain',
 				  prog='main', usage='%(prog)s [options]')
 		parser.add_argument("-L", "--L", help="System Size",default=100,type=int, nargs='?')
-		parser.add_argument("-delJ","--delJ",help="Drive strength; hopping paramtere = (1+delJ)*J",default=.1,type=float,nargs='?')
-		parser.add_argument("-T", "--T", help="Time period",default=1.0,type=float, nargs='?')
-		parser.add_argument("-mu0", "--mu0", help="Strength of chemical potential",default=2.0,type=float, nargs='?')
+		parser.add_argument("-A","--A",help="Drive strength",default=.1,type=float,nargs='?')
+		parser.add_argument("-num_steps","--num_steps",help="Discretization steps per drive period",default=10.,type=float,nargs='?')
+		parser.add_argument("-mu0", "--mu0", help="Strength of chemical potential (disprder)",default=2.0,type=float, nargs='?')
 		parser.add_argument("-num_conf","--num_conf",help = "number of disorder config per MPI_rank",default=100,type=int,nargs='?')
-		parser.add_argument("-cyc","--cyc",help="Number of drive cycles",default=100,type=int,nargs='?')
+		parser.add_argument("-w","--w",help="Frequency",default=1.,type=float,nargs='?')
+		parser.add_argument("-num_period","--num_period",help="Number of drive periods",default=10.,type=float,nargs='?')
+
 		#-- add in the argument
 		args=parser.parse_args()
 		print(args)
