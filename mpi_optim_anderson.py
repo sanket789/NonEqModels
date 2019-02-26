@@ -29,25 +29,25 @@ def main_routine(arg,c):
 	num_period = arg.num_period
 	num_conf = arg.num_conf
 	nT = num_period*num_steps
-	save_data = True
+	save_data = False
 	dt = (2*np.pi/w)/num_steps
 	T = [n*dt for n in range(nT)]
 	'''
 		#########################################  Main Code  ##############################################
 	'''
 	#Initial correlation matrix
-	HH_start = ham_anderson_insl_PBC(L,J,A,np.zeros(L))
+	HH_start = func.ham_anderson_insl_PBC(L,J,A,np.zeros(L))
 	eps_start, DD_start = np.linalg.eigh(HH_start)
 	CC_0 = ground_state(L//2,HH_start)
 	#Initialize the storage matrices
-	fname="WDIR/Feb25/Data/ANDERSON_L_%d_dJ_%g_mu0_%g_w_%g_steps_%d_tf_ncnf_%g_"%(L,dJ,mu0,w,num_steps,num_period,num_conf*mpi_size)
+	fname="WDIR/Feb25/Data/ANDERSON_L_%d_mu0_%g_w_%g_steps_%d_tf_%g_ncnf_%g_"%(L,mu0,w,num_steps,num_period,num_conf*mpi_size)
 	m_energy = np.zeros((num_conf,nT))		#energy expectation value
 	m_nbar = np.zeros((num_conf,nT))		#Average occupation
 	m_imb = np.zeros((num_conf,nT))			#Imbalance
 	m_absb_energy = np.zeros((num_conf,nT))	#Absorbed energy as defined in ref
 	m_diag = np.zeros((num_conf,nT,L))		#Diagonal of correlation matrix
 	m_curr = np.zeros((num_conf,nT,L))		#Charge current
-	m_excit = np.zeros(num_conf,L)		#Excitions as defined in ref
+	m_excit = np.zeros((num_conf,L))		#Excitions as defined in ref
 	'''
 		#########################################  Loop over configurations and time  ##############################################
 	'''
@@ -57,7 +57,7 @@ def main_routine(arg,c):
 		HH_list = []
 		for j in range(num_steps):
 			phi = A*np.cos(w*T[j])
-			HH = ham_anderson_insl_PBC(L,J,phi,mu_array)
+			HH = func.ham_anderson_insl_PBC(L,J,phi,mu_array)
 			v_eps , DD = np.linalg.eigh(HH)
 			EE = np.diag(np.exp(-1j*dt*v_eps))
 			UU = np.dot(np.conj(DD),np.dot(EE,DD.T))
@@ -140,11 +140,11 @@ if __name__ == '__main__':
 				  prog='main', usage='%(prog)s [options]')
 		parser.add_argument("-L", "--L", help="System Size",default=100,type=int, nargs='?')
 		parser.add_argument("-A","--A",help="Drive strength",default=.1,type=float,nargs='?')
-		parser.add_argument("-num_steps","--num_steps",help="Discretization steps per drive period",default=10.,type=float,nargs='?')
+		parser.add_argument("-num_steps","--num_steps",help="Discretization steps per drive period",default=10,type=int,nargs='?')
 		parser.add_argument("-mu0", "--mu0", help="Strength of chemical potential (disprder)",default=2.0,type=float, nargs='?')
 		parser.add_argument("-num_conf","--num_conf",help = "number of disorder config per MPI_rank",default=100,type=int,nargs='?')
 		parser.add_argument("-w","--w",help="Frequency",default=1.,type=float,nargs='?')
-		parser.add_argument("-num_period","--num_period",help="Number of drive periods",default=10.,type=float,nargs='?')
+		parser.add_argument("-num_period","--num_period",help="Number of drive periods",default=10,type=int,nargs='?')
 
 		#-- add in the argument
 		args=parser.parse_args()

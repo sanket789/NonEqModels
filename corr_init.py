@@ -25,3 +25,16 @@ def ground_state(num,HH):
 	eigval,eigvec = np.linalg.eigh(HH)
 	AA = np.dot(np.conj(eigvec)[:,0:num],eigvec.T[0:num,:])
 	return AA
+
+def alternate_occupy(L):
+	'''
+	Initial state is such that lattice sites are occupied alternately. psi0 = |101010> in site basis
+		Input: L = number of sites
+	'''
+	AA = np.zeros((L,L),dtype=complex)
+	for j in range(L//2):
+		AA[2*j,2*j] = 1.0
+	return AA
+
+L = 8
+print(alternate_occupy(L).real)
