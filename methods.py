@@ -161,3 +161,13 @@ def imbalance(diag):
 	n_even = np.sum(diag[range(0,L,2)])
 	n_odd = np.sum(diag[range(1,L,2)])
 	return (n_even-n_odd)/(n_even+n_odd)
+
+def energy_excitations(eps0,DD0,CC_t):
+	L = np.shape(eps0)[0]
+	m_excit = np.zeros(L)
+	for m in range(L):
+		if eps_start[m] < 0:
+			m_excit[m] = 1.0 - np.dot(DD_start.T,np.dot(CC_t,np.conj(DD_start)))[m,m].real
+		else:
+			m_excit[m] = np.dot(DD_start.T,np.dot(CC_t,np.conj(DD_start)))[m,m].real 
+	return m_excit
