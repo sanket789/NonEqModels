@@ -4,7 +4,7 @@ import time
 from mpi4py import MPI
 import argparse
 # import matplotlib.pyplot as plt
-from corr_init import ground_state
+from corr_init import ground_state,alternate_occupy
 from time_evolution import evolve_correlation_matrix
 '''
 	This is main script for time evolution of Anderson insulator.  
@@ -38,9 +38,9 @@ def main_routine(arg,c):
 	'''
 	#Initial correlation matrix
 	HH_start = ham(J,dJ,L,np.zeros(L))
-	CC_0 = ground_state(L//2,HH_start)
+	CC_0 = alternate_occupy(L)
 	#Initialize the storage matrices
-	fname = "WDIR/Feb17/Data/SQ_ANDERSON_L_%d_dJ_%g_mu0_%g_T_%g_cyc_%d_ncnf_%g_"%(L,dJ,mu0,T,cyc,num_conf*mpi_size)
+	fname = "WDIR/Feb27/Data/SQ_ALT_ANDERSON_L_%d_dJ_%g_mu0_%g_T_%g_cyc_%d_ncnf_%g_"%(L,dJ,mu0,T,cyc,num_conf*mpi_size)
 	m_energy = np.zeros((num_conf,nT))
 	m_nbar = np.zeros((num_conf,nT))
 	m_imb = np.zeros((num_conf,nT))
