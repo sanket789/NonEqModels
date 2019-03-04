@@ -173,3 +173,8 @@ def energy_excitations(eps0,DD0,CC_t):
 		else:
 			m_excit[m] = np.dot(DD0.T,np.dot(CC_t,np.conj(DD0)))[m,m].real 
 	return m_excit
+
+def absorbed_energy(energy,HH):
+	Ebar = 0.5*sum(np.diag(HH))
+	absb = (energy - energy[0])/(Ebar - energy[0])
+	return absb

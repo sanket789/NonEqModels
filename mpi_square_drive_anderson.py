@@ -78,16 +78,16 @@ def main_routine(arg,c):
 			m_entropy[k,i] = ent
 			if i%2 == 0:
 				m_energy[k,i] = np.sum(np.multiply(HH_h,CC_t)).real	
-				m_absb_energy[k,i] = (m_energy[k,i] - m_energy[k,0])			
+				# m_absb_energy[k,i] = (m_energy[k,i] - m_energy[k,0])			
 				m_curr[k,i,:] = func.charge_current(J+dJ,0.,CC_t)
 				CC_next = np.dot(np.conj(UU_h.T),np.dot(CC_t,UU_h))
 			else:
 				m_energy[k,i] = np.sum(np.multiply(HH_l,CC_t)).real
-				m_absb_energy[k,i] = (m_energy[k,i] - m_energy[k,0])
+				# m_absb_energy[k,i] = (m_energy[k,i] - m_energy[k,0])
 				m_curr[k,i,:] = func.charge_current(J-dJ,0.,CC_t)
 				CC_next = np.dot(np.conj(UU_l.T),np.dot(CC_t,UU_l))
 			CC_t = CC_next.copy()
-		m_absb_energy[k,:] = m_absb_energy[k,:]/(0.5*m_energy[k,-1]+0.5*m_energy[k,-2]-m_energy[k,0])
+		m_absb_energy[k,:] = func.absorbed_energy(m_energy[k,:],HH_h)
 		m_excit[k,:] = func.energy_excitations(v_eps_h,DD_h,CC_t)
 	'''
 		############################	Gather the data to be saved 	##################################################
