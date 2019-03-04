@@ -31,6 +31,7 @@ def main_routine(arg,c):
 	cyc = arg.cyc
 	num_conf = arg.num_conf
 	nT = 2*cyc
+	l_sub = 11	#subsystem size
 	save_data = True
 
 	'''
@@ -40,7 +41,7 @@ def main_routine(arg,c):
 	HH_start = ham(J,dJ,L,np.zeros(L))
 	CC_0 = alternate_occupy(L)
 	#Initialize the storage matrices
-	fname = "WDIR/Feb27/Data/SQ_ALT_ANDERSON_L_%d_dJ_%g_mu0_%g_T_%g_cyc_%d_ncnf_%g_"%(L,dJ,mu0,T,cyc,num_conf*mpi_size)
+	fname = "WDIR/SQ_ALT_ANDERSON_L_%d_dJ_%g_mu0_%g_T_%g_cyc_%d_ncnf_%g_"%(L,dJ,mu0,T,cyc,num_conf*mpi_size)
 	m_energy = np.zeros((num_conf,nT))
 	m_nbar = np.zeros((num_conf,nT))
 	m_imb = np.zeros((num_conf,nT))
@@ -48,6 +49,7 @@ def main_routine(arg,c):
 	m_diag = np.zeros((num_conf,nT,L))
 	m_curr = np.zeros((num_conf,nT,L))
 	m_excit = np.zeros((num_conf,L))
+	m_entropy = np.zeros((num_conf,nT))
 	'''
 		#########################################  Loop over configurations and time  ##############################################
 	'''
@@ -72,6 +74,8 @@ def main_routine(arg,c):
 			m_nbar[k,i] = np.trace(CC_t).real		 
 			m_imb[k,i] = func.imbalance(np.diag(CC_t).real)
 			m_diag[k,i,:] = np.diag(CC_t).real
+			ent,eig_ent = func.vonNeumann_entropy(CC_t[0:l_sub,0:l_sub])
+			m_entropy[k,i] = ent
 			if i%2 == 0:
 				m_energy[k,i] = np.sum(np.multiply(HH_h,CC_t)).real	
 				m_absb_energy[k,i] = (m_energy[k,i] - m_energy[k,0])			
@@ -95,6 +99,7 @@ def main_routine(arg,c):
 	recv_diag = None
 	recv_curr = None
 	recv_excit = None
+	recv_entropy = None
 	if mpi_rank	== 0:
 		recv_energy = np.empty([mpi_size,num_conf,nT])
 		recv_nbar = np.empty([mpi_size,num_conf,nT])
@@ -103,6 +108,7 @@ def main_routine(arg,c):
 		recv_diag = np.empty([mpi_size,num_conf,nT,L])
 		recv_curr = np.empty([mpi_size,num_conf,nT,L])
 		recv_excit = np.empty([mpi_size,num_conf,L])
+		recv_entropy = np.empty([mpi_size,num_conf,nT])
 	c.Gather(m_energy,recv_energy,root=0)
 	c.Gather(m_nbar,recv_nbar,root=0)
 	c.Gather(m_imb,recv_imb,root=0)
@@ -110,6 +116,7 @@ def main_routine(arg,c):
 	c.Gather(m_diag,recv_diag,root=0)
 	c.Gather(m_curr,recv_curr,root=0)
 	c.Gather(m_excit,recv_excit,root=0)
+	c.Gather(m_entropy,recv_entropy,root=0)
 	if mpi_rank	== 0:
 		recv_diag = np.mean(recv_diag,(0,1))
 		recv_curr = np.mean(recv_curr,(0,1))
@@ -121,6 +128,8 @@ def main_routine(arg,c):
 			np.save(fname+"diag.npy",recv_diag)
 			np.save(fname+"curr.npy",recv_curr)
 			np.save(fname+"excit.npy",recv_excit)
+			np.save(fname+"entropy%d.npy"%l_sub,recv_entropy)
+			print("Data files saved at : %s"%fname)
 	end_time = time.time()
 	print('Time taken by rank %d : %g seconds'%(mpi_rank,end_time - start_time))
 '''
@@ -131,7 +140,10 @@ if __name__ == '__main__':
 	comm = MPI.COMM_WORLD
 	rank = comm.Get_rank()
 	if rank==0:
-
+		print('----------------------------------------------------------')
+		print('Anderson insulator with alternately occupied initial state')
+		print('----------------------------------------------------------')
+		print()
 		## parsing at rank =0
 		parser = argparse.ArgumentParser(
 				  description='Time evolution of fermion chain',

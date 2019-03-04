@@ -1,5 +1,7 @@
 import numpy as np
 import math
+from corr_init import ground_state
+import matplotlib.pyplot as plt
 def phase(L,A,w,t):
 	'''
 		Input: 
@@ -167,7 +169,7 @@ def energy_excitations(eps0,DD0,CC_t):
 	m_excit = np.zeros(L)
 	for m in range(L):
 		if eps0[m] < 0:
-			m_excit[m] = 1.0 - np.dot(DD0.T,np.dot(CC_t,np.conj(DD0)))[m,m].real
+			m_excit[m] = np.dot(DD0.T,np.dot(CC_t,np.conj(DD0)))[m,m].real
 		else:
 			m_excit[m] = np.dot(DD0.T,np.dot(CC_t,np.conj(DD0)))[m,m].real 
 	return m_excit
