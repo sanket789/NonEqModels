@@ -50,6 +50,7 @@ def main_routine(arg,c):
 	m_curr = np.zeros((num_conf,nT,L))
 	m_excit = np.zeros((num_conf,L))
 	m_entropy = np.zeros((num_conf,nT))
+	m_CC = np.zeros((num_conf,nT,L,L))
 	'''
 		#########################################  Loop over configurations and time  ##############################################
 	'''
@@ -70,6 +71,7 @@ def main_routine(arg,c):
 		CC_t = CC_0.copy()
 
 		for i in range(nT):
+			m_CC[k,i,:,:] = CC_t.copy()
 			#Calculate Hamiltonian
 			m_nbar[k,i] = np.trace(CC_t).real		 
 			m_imb[k,i] = func.imbalance(np.diag(CC_t).real)
@@ -87,6 +89,7 @@ def main_routine(arg,c):
 				m_curr[k,i,:] = func.charge_current(J-dJ,0.,CC_t)
 				CC_next = np.dot(np.conj(UU_l.T),np.dot(CC_t,UU_l))
 			CC_t = CC_next.copy()
+
 		m_absb_energy[k,:] = func.absorbed_energy(m_energy[k,:],HH_h)
 		m_excit[k,:] = func.energy_excitations(v_eps_h,DD_h,CC_t)
 	'''
@@ -100,6 +103,7 @@ def main_routine(arg,c):
 	recv_curr = None
 	recv_excit = None
 	recv_entropy = None
+	recv_CC = None
 	if mpi_rank	== 0:
 		recv_energy = np.empty([mpi_size,num_conf,nT])
 		recv_nbar = np.empty([mpi_size,num_conf,nT])
@@ -109,6 +113,7 @@ def main_routine(arg,c):
 		recv_curr = np.empty([mpi_size,num_conf,nT,L])
 		recv_excit = np.empty([mpi_size,num_conf,L])
 		recv_entropy = np.empty([mpi_size,num_conf,nT])
+		recv_CC = np.empty([mpi_size,num_conf,nT,L,L])
 	c.Gather(m_energy,recv_energy,root=0)
 	c.Gather(m_nbar,recv_nbar,root=0)
 	c.Gather(m_imb,recv_imb,root=0)
@@ -117,6 +122,7 @@ def main_routine(arg,c):
 	c.Gather(m_curr,recv_curr,root=0)
 	c.Gather(m_excit,recv_excit,root=0)
 	c.Gather(m_entropy,recv_entropy,root=0)
+	c.Gather(m_CC,recv_CC,root=0)
 	if mpi_rank	== 0:
 		recv_diag = np.mean(recv_diag,(0,1))
 		recv_curr = np.mean(recv_curr,(0,1))
@@ -129,6 +135,7 @@ def main_routine(arg,c):
 			np.save(fname+"curr.npy",recv_curr)
 			np.save(fname+"excit.npy",recv_excit)
 			np.save(fname+"entropy%d.npy"%l_sub,recv_entropy)
+			np.save(fname+"CC.npy",recv_CC)
 			print("Data files saved at : %s"%fname)
 	end_time = time.time()
 	print('Time taken by rank %d : %g seconds'%(mpi_rank,end_time - start_time))

@@ -178,3 +178,5 @@ def absorbed_energy(energy,HH):
 	Ebar = 0.5*sum(np.diag(HH))
 	absb = (energy - energy[0])/(Ebar - energy[0])
 	return absb
+
+
