@@ -1,7 +1,6 @@
 import numpy as np
 import math
 from corr_init import ground_state
-import matplotlib.pyplot as plt
 def phase(L,A,w,t):
 	'''
 		Input: 
@@ -178,5 +177,6 @@ def absorbed_energy(energy,HH):
 	Ebar = 0.5*sum(np.diag(HH))
 	absb = (energy - energy[0])/(Ebar - energy[0])
 	return absb
+
 
 

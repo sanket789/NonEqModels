@@ -33,7 +33,10 @@ def main_routine(arg,c):
 	nT = 2*cyc
 	l_sub = 11	#subsystem size
 	save_data = True
-
+	if nT<40:
+		num_CC_samples = cyc
+	else:
+		num_CC_samples = 20
 	'''
 		#########################################  Main Code  ##############################################
 	'''
@@ -41,7 +44,7 @@ def main_routine(arg,c):
 	HH_start = ham(J,dJ,L,np.zeros(L))
 	CC_0 = alternate_occupy(L)
 	#Initialize the storage matrices
-	fname = "WDIR/SQ_ALT_ANDERSON_L_%d_dJ_%g_mu0_%g_T_%g_cyc_%d_ncnf_%g_"%(L,dJ,mu0,T,cyc,num_conf*mpi_size)
+	fname = "WDIR/Mar4/Data/SQ_ALT_ANDERSON_L_%d_dJ_%g_mu0_%g_T_%g_cyc_%d_ncnf_%g_"%(L,dJ,mu0,T,cyc,num_conf*mpi_size)
 	m_energy = np.zeros((num_conf,nT))
 	m_nbar = np.zeros((num_conf,nT))
 	m_imb = np.zeros((num_conf,nT))
@@ -50,12 +53,15 @@ def main_routine(arg,c):
 	m_curr = np.zeros((num_conf,nT,L))
 	m_excit = np.zeros((num_conf,L))
 	m_entropy = np.zeros((num_conf,nT))
-	m_CC = np.zeros((num_conf,nT,L,L))
+	m_CC = np.zeros((num_conf,num_CC_samples,L,L),dtype=complex)
+	m_mu = np.zeros((num_conf,L))
+	tlist = []
 	'''
 		#########################################  Loop over configurations and time  ##############################################
 	'''
 	for k in range(num_conf):
 		mu_array = np.random.uniform(-mu0,mu0,L)
+		m_mu[k,:] = mu_array.copy()
 		#Define two Hamiltonians
 		#Hamiltonian with (J+dJ)
 		HH_h = ham(J,dJ,L,mu_array)
@@ -69,9 +75,12 @@ def main_routine(arg,c):
 		UU_l = np.dot(np.conj(DD_l),np.dot(EE_l,DD_l.T))
 		#initialize correlation matrix to the ground state of HH_start		
 		CC_t = CC_0.copy()
-
+		j = 0
 		for i in range(nT):
-			m_CC[k,i,:,:] = CC_t.copy()
+			if i in np.linspace(2,nT-1,num_CC_samples,endpoint=True):
+				m_CC[k,j,:,:] = CC_t.copy()
+				j = j+1
+				tlist.append(i*T/2)
 			#Calculate Hamiltonian
 			m_nbar[k,i] = np.trace(CC_t).real		 
 			m_imb[k,i] = func.imbalance(np.diag(CC_t).real)
@@ -104,6 +113,7 @@ def main_routine(arg,c):
 	recv_excit = None
 	recv_entropy = None
 	recv_CC = None
+	recv_mu = None
 	if mpi_rank	== 0:
 		recv_energy = np.empty([mpi_size,num_conf,nT])
 		recv_nbar = np.empty([mpi_size,num_conf,nT])
@@ -113,7 +123,8 @@ def main_routine(arg,c):
 		recv_curr = np.empty([mpi_size,num_conf,nT,L])
 		recv_excit = np.empty([mpi_size,num_conf,L])
 		recv_entropy = np.empty([mpi_size,num_conf,nT])
-		recv_CC = np.empty([mpi_size,num_conf,nT,L,L])
+		recv_CC = np.empty([mpi_size,num_conf,num_CC_samples,L,L],dtype=complex)
+		recv_mu = np.empty([mpi_size,num_conf,L])
 	c.Gather(m_energy,recv_energy,root=0)
 	c.Gather(m_nbar,recv_nbar,root=0)
 	c.Gather(m_imb,recv_imb,root=0)
@@ -123,10 +134,12 @@ def main_routine(arg,c):
 	c.Gather(m_excit,recv_excit,root=0)
 	c.Gather(m_entropy,recv_entropy,root=0)
 	c.Gather(m_CC,recv_CC,root=0)
+	c.Gather(m_mu,recv_mu,root=0)
 	if mpi_rank	== 0:
 		recv_diag = np.mean(recv_diag,(0,1))
 		recv_curr = np.mean(recv_curr,(0,1))
 		if save_data == True:
+			np.save(fname+"tlist.npy",tlist)
 			np.save(fname+"energy.npy",recv_energy)
 			np.save(fname+"nbar.npy",recv_nbar)
 			np.save(fname+"imb.npy",recv_imb)
@@ -136,6 +149,7 @@ def main_routine(arg,c):
 			np.save(fname+"excit.npy",recv_excit)
 			np.save(fname+"entropy%d.npy"%l_sub,recv_entropy)
 			np.save(fname+"CC.npy",recv_CC)
+			np.save(fname+"mu.npy",recv_mu)
 			print("Data files saved at : %s"%fname)
 	end_time = time.time()
 	print('Time taken by rank %d : %g seconds'%(mpi_rank,end_time - start_time))
