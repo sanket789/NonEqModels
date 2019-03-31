@@ -4,7 +4,7 @@ import numpy as np
 import methods as func
 import time
 import matplotlib.pyplot as plt
-from corr_init import ground_state
+import corr_init as cstart
 from time_evolution import evolve_correlation_matrix
 
 '''
@@ -14,24 +14,28 @@ from time_evolution import evolve_correlation_matrix
 	The reults of this test code has to compared with time evolution using quspin package
 	The Anderson insulator is driven such that the hopping apmlitude switches between (J+dJ) and (J-dJ) with period T.
 '''
-start_time = time.time()
-L = 100
-J = 1.0
-mu0 = 5.0
-dJ = 0.2*J
-T = 1.
-tf = 100.0
-# dt = 0.1
-# dt = 0.001
-nT = 2*int(tf/T)
-save_data = True
-fname = 'WDIR/test/Serial_0_'#"WDIR/test/SQ_L_%d_T_%g_mu0_%g_tf_%g_dJ_%g_"%(L,T,mu0,tf,dJ)
+L = 4	#system size
+J = 1.
+delta = 0.0
+dJ = 0.1
+T = 1.0
+cyc = 4
+
+nT = 2*cyc
+save_data = False
+
+# CC_0 = np.zeros((L,L),dtype=complex)
+# CC_0[0,0] = 1.0
+# CC_0[1,1] = 1.0
+# CC_0[2,2] = 1.0
+# CC_0 = cstart.left_spatial_occ(L)#cstart.alternate_occupy(L)
+# CC_t = CC_0.copy()
 
 '''
 	#########################################  Main Code  ##############################################
 '''
-mu_array = np.random.uniform(-mu0,mu0,L)
-np.save("WDIR/test/mu_0.npy",mu_array)
+mu_array = np.load('ED/ED_mu.npy')
+# np.save("WDIR/test/mu_0.npy",mu_array)
 #Define two Hamiltonians
 #Hamiltonian with (J+dJ)
 HH_h = np.diag(mu_array) - (J+dJ)*np.diag(np.ones(L-1),1)- (J+dJ)*np.diag(np.ones(L-1),-1)
@@ -48,15 +52,15 @@ v_eps_l , DD_l = np.linalg.eigh(HH_l)
 EE_l = np.diag(np.exp(-1j*0.5*T*v_eps_l))
 UU_l = np.dot(np.conj(DD_l),np.dot(EE_l,DD_l.T))
 #initialize correlation matrix to the ground state of HH_start
-HH_start = - (J+dJ)*np.diag(np.ones(L-1),1)- (J+dJ)*np.diag(np.ones(L-1),-1)
-HH_start[-1,0] = -(J+dJ)
-HH_start[0,-1] = -(J+dJ) 
-CC_0 = ground_state(L//2,HH_start)
-print(np.shape(CC_0))
+# HH_start = - (J+dJ)*np.diag(np.ones(L-1),1)- (J+dJ)*np.diag(np.ones(L-1),-1)
+# HH_start[-1,0] = -(J+dJ)
+# HH_start[0,-1] = -(J+dJ) 
+# print(HH_h)
+# print(HH_l)
+CC_0 = cstart.alternate_occupy(L)#ground_state(num_p,HH_h)
+# print('ground state energy = ',np.sum(np.multiply(HH_h,CC_0)).real)
 CC_t = CC_0.copy()
-
 #Initialize the storage matrices
-tlist = np.linspace(0.0,tf,nT,endpoint=False)
 m_energy = np.zeros(nT)
 m_nbar = np.zeros(nT)
 m_corr = np.zeros((nT,L))
@@ -64,25 +68,45 @@ m_spectrum = np.zeros((nT,L))
 occ_indx = np.arange(L/2)-L//4
 m_exact_energy = np.zeros(nT)
 ham = np.zeros(nT)
+m_nsub = np.zeros(nT)
+m_cc0 = np.zeros(nT)
+m_CC = np.zeros((nT,L,L),dtype=complex)
 #extract Hamiltonian paramter from quspin simulation
 
 '''
 	#########################################  Loop over Time  ##############################################
 '''
 for i in range(nT):
-	#Calculate Hamiltonian		 
+	#Calculate Hamiltonian
+	m_CC[i,:] = CC_t.copy()		 
 	if i%2 == 0:
 		m_energy[i] = np.sum(np.multiply(HH_h,CC_t)).real
-		m_nbar[i] = np.sum(np.diag(CC_t)[0:L//2]).real
+		m_nbar[i] = np.sum(np.diag(CC_t)[0:L]).real/L
+		m_nsub[i] = np.sum(np.diag(CC_t)[0:3]).real
+		m_cc0[i] = CC_t[1,1].real
 		CC_next = np.dot(np.conj(UU_h.T),np.dot(CC_t,UU_h))
 		# m_exact_energy[i] = sum([-2*(J+dJ)*np.cos(2*np.pi*m/L)+mu0 for m in occ_indx]).real
 	else:
 		m_energy[i] = np.sum(np.multiply(HH_l,CC_t)).real
-		m_nbar[i] = np.sum(np.diag(CC_t)[0:L//2]).real
+		m_nbar[i] = np.sum(np.diag(CC_t)[0:L]).real/L
+		m_nsub[i] = np.sum(np.diag(CC_t)[0:3]).real
+		m_cc0[i] = CC_t[1,1].real
 		CC_next = np.dot(np.conj(UU_l.T),np.dot(CC_t,UU_l))
 		# m_exact_energy[i] = sum([-2*(J-dJ)*np.cos(2*np.pi*m/L)+mu0 for m in occ_indx]).real
 	CC_t = CC_next.copy()
-	
+print(m_nbar[::2])
+print(m_energy[::2])
+
+ED_GG = np.load('ED/ED_GG.npy')
+ED_CC = ED_GG[:,L:2*L,L:2*L]
+print('Initial',np.allclose(ED_CC[0,:],m_CC[0,:]))
+print('All',np.allclose(ED_CC,m_CC[::2,:,:]))
+plt.plot(ED_CC[:,0,0].real,'--')
+plt.plot(m_CC[::2,0,0].real)
+plt.show()
+
+
+np.save('ED/and_CC.npy',m_CC)
 '''
 	#############################	Save Data Files 	###################################
 '''
@@ -98,23 +122,44 @@ if save_data == True:
 ############################	Plot the data for comparison	########################################
 
 '''
-# EE_q_load = np.load("WDIR/Quspin_SQ_L_%d_T_%g_mu0_%g_tf_%g_dJ_%g_energy.npy"%(L,T,mu0,tf,dJ))
-# # EE_q = [EE_q_load[i] for i in 5*np.arange(nT)]
-# plt.plot(tlist,m_energy,label = 'simulation')
-# # plt.plot(tlist,m_exact_energy,'--',label="exact")
-# plt.plot(tlist,EE_q_load,label='quspin')
-# plt.xlabel('time')
-# plt.ylabel('energy')
-# plt.title('Energy for L = %d dJ = %g T = %g mu0 = %g '%(L,dJ,T,mu0))
-# plt.legend()
-# plt.savefig('energy_square.png')
-# plt.show()
-# plt.plot(tlist,np.abs(m_energy - EE_q_load))
-# plt.xlabel('time')
-# plt.ylabel('|E_c - E_quspin|')
-# plt.title(' Error: L = %d dJ = %g T = %g mu0 = %g '%(L,dJ,T,mu0))
-# plt.savefig('error_energy_square.png')
-# plt.show()
-# end_time = time.time()
-# print("Simulation Done. Time taken : ",(end_time - start_time)," seconds")
+# ED_nbar = np.load('ED/ED_nbar.npy')
+# ED_nsub = np.load('ED/ED_nsub.npy')
+# ED_cc0 = np.load('ED/ED_cc0.npy')
+# ED_energy = np.load('ED/ED_energy.npy')
 
+# plt.plot(range(cyc),ED_energy,'--',label='ED')
+# plt.plot(range(cyc),m_energy[::2],label='CORR')
+# plt.legend()
+# plt.xlabel('t/T')
+# plt.title('energy')
+# plt.savefig('ED/energy_L_%d.png'%L)
+# plt.show()
+
+# plt.plot(range(cyc),ED_nbar,'--',label='ED')
+# plt.plot(range(cyc),m_nbar[::2],label='CORR')
+# plt.legend()
+# plt.xlabel('t/T')
+# plt.title('nbar')
+# plt.show()
+
+# plt.plot(range(100),ED_nsub[0:100],'--',label='ED')
+# plt.plot(range(100),m_nsub[::2][0:100],label='CORR')
+# plt.legend()
+# plt.xlabel('t/T')
+# plt.title('Subsystem of size 3')
+# plt.savefig('ED/nsub_L_%d.png'%L)
+# plt.show()
+
+# plt.plot(range(cyc),ED_cc0,'--',label='ED')
+# plt.plot(range(cyc),m_cc0[::2],label='CORR')
+# plt.legend()
+# plt.xlabel('t/T')
+# plt.title('cc0')
+# plt.savefig('ED/cc0_L_%d.png'%L)
+# plt.show()
+
+# plt.semilogy(range(cyc),np.divide(np.abs(ED_nsub - m_nsub[::2]),ED_nsub))
+# plt.xlabel('t/T')
+# plt.title('Relative error in subsystem occupation')
+# plt.savefig('ED/nsubError_L_%d.png'%L)
+# plt.show()

@@ -11,9 +11,10 @@ def alt_initial_state(L):
 
 
 def ham(L,J,delta,mu_array):
-	h11 = np.diag(-J*np.ones(L-1,dtype=complex),1) + np.diag(-np.conjugate(J)*np.ones(L-1,dtype=complex),-1) + np.diag(mu_array)
-	h11[-1,0] = -J
-	h11[0,-1] = -np.conjugate(J)
+	h11 = np.diag(-0.5*J*np.ones(L-1,dtype=complex),1) + np.diag(-np.conjugate(0.5*J)*np.ones(L-1,dtype=complex),-1) \
+				+ np.diag(0.5*mu_array)
+	h11[-1,0] = -0.5*J
+	h11[0,-1] = -np.conjugate(0.5*J)
 	h22 = -h11.conj()
 
 	h12 = np.diag(0.5*delta*np.ones(L-1,dtype=complex),1) + np.diag(-0.5*np.conjugate(delta)*np.ones(L-1,dtype=complex),-1) 
@@ -32,28 +33,38 @@ def dynamics(H,dt):
 	gd = eigvec[0:L,L:2*L] #positive eigenvalue vectors
 	hd = eigvec[L:2*L,L:2*L]
 	Td = np.hstack((np.vstack((gd,hd)),np.vstack((hd.conj(),gd.conj()))))
-
-	A = np.dot(Td,np.dot(np.diag(np.exp(-1j*dt*eigval)),Td.T.conj()))
-	B = np.dot(Td,np.dot(np.diag(np.exp(1j*dt*eigval)),Td.T.conj()))
+	# print(np.allclose(np.eye(2*L),np.dot(Td,Td.T.conj())))
+	A = np.dot(Td,np.dot(np.diag(np.exp(-2j*dt*eigval)),Td.T.conj()))
+	B = np.dot(Td,np.dot(np.diag(np.exp(2j*dt*eigval)),Td.T.conj()))
 	return A,B
 
 def construct_G(C,F):
 	G = np.hstack((np.vstack((np.eye(L) - C.conj(),F)),np.vstack((-F.conj(),C)))) #My result
 	# G = np.hstack((np.vstack((np.eye(L) - C,F.conj())),np.vstack((F,C))))
 	return G
+
+def getEnergy(H,G):
+	L = np.shape(H)[0]//2
+	a = np.sum(np.multiply(H[0:L,0:L],G[L:2*L,L:2*L]))
+	b = np.sum(np.multiply(H[0:L,L:2*L],G[L:2*L,0:L]))
+	c = np.sum(np.multiply(H[L:2*L,0:L],G[0:L,L:2*L]))
+	d = np.sum(np.multiply(H[L:2*L,L:2*L],G[0:L,0:L]))
+	return (a+b+c+d).real - np.sum(np.diag(H[0:L,0:L])).real
 '''
 	Simulation parameters
 '''
+L = 8	#system size
+J = 1.
+delta = 2.3
+dJ = 0.1
+T = 1.25
+cyc = 10
 
-L = 4
-J = 1.0
-mu0 = 3.0
-dJ = 0.0*J
-delta = 53.
-T = 1.7
-cyc = 2
+nT = 2*cyc
+
 nT = int(2*cyc)
 mu_array = np.load("ED/ED_mu.npy")
+ED_GG = np.load("ED/ED_GG.npy")
 tlist = 0.5*T*np.arange(2*cyc)
 
 #data storing variables
@@ -61,7 +72,7 @@ m_CC = np.zeros((nT,L,L),dtype=complex)
 m_FF = np.zeros((nT,L,L),dtype=complex)
 m_GG = np.zeros((nT,2*L,2*L),dtype=complex)
 m_nb = np.zeros(nT)
-
+m_energy = np.zeros(nT)
 #Hamiltonian 1
 HH_h = ham(L,J+dJ,delta,mu_array)
 UU_h , VV_h = dynamics(HH_h,0.5*T)
@@ -74,12 +85,13 @@ GG_t = construct_G(CC_0,FF_0)
 '''
 	Main loop
 '''
-
+# GG_t = ED_GG[0,:,:]
 for i in range(nT):
 	m_GG[i,:,:] = GG_t.copy()
 	m_CC[i,:,:] = GG_t[L:2*L,L:2*L]
 	m_FF[i,:,:] = GG_t[L:2*L,0:L]
 	m_nb[i] = np.sum(np.diag(m_CC[i,:,:]).real)
+	m_energy[i] = getEnergy(HH_h,m_GG[i,:,:])
 	# print(m_nb[i])
 	if i%2 == 0: #Hamiltonian 1
 		GG_next = np.dot(UU_h,np.dot(GG_t,VV_h))
@@ -89,12 +101,22 @@ for i in range(nT):
 
 
 ED_GG = np.load("ED/ED_GG.npy")
-ED_CC_old = np.load("ED/ED_CC_old.npy")
+and_CC = np.load("ED/and_CC.npy")
+# ED_CC_old = np.load("ED/ED_CC_old.npy")
 # print('All :',np.allclose(ED_GG[:,L,L],m_GG[:,L,L]))
-print('CC All:' ,np.allclose(ED_GG[:,L:2*L,L:2*L],m_GG[:,L:2*L,L:2*L]))
-print('FF All:' ,np.allclose(ED_GG[:,L:2*L,0:L],m_GG[:,L:2*L,0:L]))
-print('All Initial :' ,np.allclose(ED_GG[0,:,:],m_GG[0,:,:]))
-print(np.allclose(ED_GG[:,0:L,L:2*L],-ED_GG[:,L:2*L,0:L].conj()))
+print('-------------------------------------------')
+print('CC All:' ,np.allclose(ED_GG[:,L:2*L,L:2*L],m_GG[::2,L:2*L,L:2*L]))
+print('FF All:' ,np.allclose(ED_GG[:,L:2*L,0:L],m_GG[::2,L:2*L,0:L]))
+print('--------------------------------------------')
+# print('cdc00 :' ,np.allclose(ED_GG[:,L,L],m_GG[:,L,L]))
+# print(np.allclose(m_GG[0,:,:],ED_GG[0,:,:]))
+print('nbar',m_nb[::2])
+print('energy',m_energy[::2])
+# print(HH_h.real)
+# print(m_GG[0,:].real)
+
+# print(np.allclose(and_CC,m_CC),'and')
+
 # for i in range(nT):
 # 	print(np.sum(np.diag(m_CC[i,:,:]).real),np.sum(np.diag(ED_GG[i,L:2*L,L:2*L]).real))
 # plt.plot(tlist,ED_GG[:,L+1,L+1].real,label='ED-new')
@@ -102,8 +124,12 @@ print(np.allclose(ED_GG[:,0:L,L:2*L],-ED_GG[:,L:2*L,0:L].conj()))
 # plt.plot(tlist,ED_CC_old[:,1,1].real,label='ED - old')
 # plt.legend()
 # plt.show()
-plt.plot(tlist,m_nb)
-plt.show()
+# plt.plot(tlist,m_GG[:,L,L].real)
+# plt.plot(tlist,ED_GG[:,L,L].real,'--')
+
+# plt.show()
 # plt.plot(tlist,ED_GG[:,L,L].real,'--')
 # plt.plot(tlist,m_GG[:,1,1].real+m_GG[:,L+1,L+1].real)
+# plt.show()
+# plt.plot(m_energy)
 # plt.show()
