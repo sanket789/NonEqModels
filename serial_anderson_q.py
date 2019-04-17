@@ -14,7 +14,7 @@ from time_evolution import evolve_correlation_matrix
 	The reults of this test code has to compared with time evolution using quspin package
 '''
 start_time = time.time()
-L = 102
+L = 100
 J = 1.0
 mu0 = 5.0
 A = 1.0
@@ -26,7 +26,7 @@ save_data = False
 '''
 	#########################################  Main Code  ##############################################
 '''
-mu_array = mu0*np.ones(L)
+mu_array = 'ED/ED_mu.npy'
 #initialize correlation matrix to the ground state of clean Hamiltonian at t=0
 ham_init = func.ham_anderson_insl_PBC(L,J,0,mu_array)
 CC_0 = ground_state(L//2,ham_init)

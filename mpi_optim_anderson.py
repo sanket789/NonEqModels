@@ -29,7 +29,7 @@ def main_routine(arg,c):
 	num_period = arg.num_period
 	num_conf = arg.num_conf
 	nT = num_period*num_steps
-	save_data = False
+	save_data = True
 	dt = (2*np.pi/w)/num_steps
 	T = [n*dt for n in range(nT)]
 	'''

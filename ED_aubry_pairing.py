@@ -7,13 +7,13 @@ import ED_func as f
 
 L = 6	#system size
 J = 1.
-delta = 2.3
-dJ = 0.1
+delta = 1.5
+dJ = 0.0
 T = 1.25
-cyc = 100
+cyc = 0
 nT = cyc
 sigma = 0.5*(np.sqrt(5.)+1.)
-mu_array = 0.5*np.asarray([np.cos(2*np.pi*sigma*nsite + 0.356) for nsite in range(L) ])
+mu_array = 4.*np.asarray([np.cos(2*np.pi*sigma*nsite + 0.356) for nsite in range(L) ])
 basis = f.construct_full_basis(L)
 #Hamiltonian
 Hchem = f.onsite_pot_op(basis,L,mu_array)		#onsite term
@@ -22,7 +22,9 @@ HH1 = f.hop_op(basis,L,J+dJ) + Hchem + Hdel	#0 to T/2 Hamiltonian
 HH2 = f.hop_op(basis,L,J-dJ) + Hchem + Hdel	#T/2 to T Hamiltonian
 UU = f.getUnitary(HH1,HH2,0.5*T)
 #State
-# E_g,psi_g = sps.linalg.eigs(HH1,k=1,which='SR')
+E_g,psi_g = sps.linalg.eigs(HH1,k=1,which='SR')
+plt.plot(np.abs(psi_g)**2)
+plt.show()
 # psi_t = psi_g.T[0].copy()
 # print(E_g, 'GS energy')
 # print(psi_t)
@@ -57,6 +59,7 @@ for i in range(nT):
 	m_nb[i] = np.sum(np.diag(m_GG[i,L:2*L,L:2*L]).real)
 	m_energy[i] = np.dot(psi_t.conj(),np.dot(HH1.toarray(),psi_t)).real #f.expect_val(HH1,psi_t).real
 	#Evolution		
+	print(max(m_GG[i,:].ravel()))
 	psi_t = np.dot(UU,psi_t)
 # print(m_GG[0,:,:].real)
 # print(np.allclose(np.eye(L) - m_GG[:,0:L,0:L].conj(),m_GG[:,L:2*L,L:2*L]))

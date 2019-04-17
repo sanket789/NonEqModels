@@ -35,6 +35,3 @@ def alternate_occupy(L):
 	for j in range(L//2):
 		AA[2*j,2*j] = 1.0
 	return AA
-
-L = 8
-print(alternate_occupy(L).real)
