@@ -29,13 +29,52 @@ def ham(L,J,delta,mu_array):
 def dynamics(H,dt):
 	L = H.shape[0]//2
 	eigval, eigvec = np.linalg.eigh(H)
+	# print(eigval)
+	
+	z = 0
+	for i in range(2*L):
+		if abs(eigval[i]) < 1E-8:
+			z = z+1
+	if z==0:
+		gd = eigvec[0:L,L:2*L] #positive eigenvalue vectors.
+		hd = eigvec[L:2*L,L:2*L]
+	else:	
+		gd = np.zeros((L,L),dtype=complex)
+		hd = np.zeros((L,L),dtype=complex)
+		j = 1
+		gd[:,0] = eigvec[0:L,L+z//2-1]
+		hd[:,0] = eigvec[L:2*L,L+z//2-1]
+		for i in range(1,z):
+			if j < z//2:
+				print(i,j,z//2)	
+				gdv = eigvec[0:L,L+z//2-1-i]
+				hdv = eigvec[L:2*L,L+z//2-1-i]
+				flag = 0
+				for k in range(i):
+					if np.array_equal(gdv.conj() , hd[:,k]):
+						flag += 1
+					else: 
+						flag += 0 
+				print(flag)
+				if flag==0:
+					gd[:,j] = gdv.copy()
+					hd[:,j] = hdv.copy()
+					j = j+1
+		gd[:,z//2:] =  eigvec[0:L,L+z//2:]
+		hd[:,z//2:] =  eigvec[L:2*L,L+z//2:]
+
+
 	eigval = np.concatenate((eigval[L:2*L],np.flip(eigval[0:L])))
-	gd = eigvec[0:L,L:2*L] #positive eigenvalue vectors
-	hd = eigvec[L:2*L,L:2*L]
+	# print(eigval)
+	# print(np.dot(uu.conj().T,uu).real)
+	print(gd[:,:].real,'\n',hd[:,:].real)
+	print(eigvec.real)
+	# print(np.allclose(np.eye(2*L),np.dot(eigvec,eigvec.T.conj())),'unitary eig' )
 	Td = np.hstack((np.vstack((gd,hd)),np.vstack((hd.conj(),gd.conj()))))
-	# print(np.allclose(np.eye(2*L),np.dot(Td,Td.T.conj())))
+	print(np.allclose(np.eye(2*L),np.dot(Td,Td.T.conj())),'unitary T' )
 	A = np.dot(Td,np.dot(np.diag(np.exp(-2j*dt*eigval)),Td.T.conj()))
 	B = np.dot(Td,np.dot(np.diag(np.exp(2j*dt*eigval)),Td.T.conj()))
+	# print(np.dot(Td.T.conj(),Td).real)
 	return A,B
 
 def construct_G(C,F):
@@ -53,17 +92,16 @@ def getEnergy(H,G):
 '''
 	Simulation parameters
 '''
-L = 8	#system size
+L = 4	#system size
 J = 1.
-delta = 2.3
+delta = 0.
 dJ = 0.1
 T = 1.25
 cyc = 10
 
 nT = 2*cyc
 
-nT = int(2*cyc)
-mu_array = np.load("ED/ED_mu.npy")
+mu_array = np.zeros(L)#np.load("ED/ED_mu.npy")
 ED_GG = np.load("ED/ED_GG.npy")
 tlist = 0.5*T*np.arange(2*cyc)
 
@@ -98,20 +136,20 @@ for i in range(nT):
 	else: #Hamiltonian 2
 		GG_next = np.dot(UU_l,np.dot(GG_t,VV_l))
 	GG_t = GG_next.copy()
-
+	# print(max(GG_t.ravel()))
 
 ED_GG = np.load("ED/ED_GG.npy")
-and_CC = np.load("ED/and_CC.npy")
-# ED_CC_old = np.load("ED/ED_CC_old.npy")
+# and_CC = np.load("ED/and_CC.npy")
+# # ED_CC_old = np.load("ED/ED_CC_old.npy")
 # print('All :',np.allclose(ED_GG[:,L,L],m_GG[:,L,L]))
-print('-------------------------------------------')
+# print('-------------------------------------------')
 print('CC All:' ,np.allclose(ED_GG[:,L:2*L,L:2*L],m_GG[::2,L:2*L,L:2*L]))
 print('FF All:' ,np.allclose(ED_GG[:,L:2*L,0:L],m_GG[::2,L:2*L,0:L]))
-print('--------------------------------------------')
-# print('cdc00 :' ,np.allclose(ED_GG[:,L,L],m_GG[:,L,L]))
-# print(np.allclose(m_GG[0,:,:],ED_GG[0,:,:]))
-print('nbar',m_nb[::2])
-print('energy',m_energy[::2])
+# print('--------------------------------------------')
+# # print('cdc00 :' ,np.allclose(ED_GG[:,L,L],m_GG[:,L,L]))
+# # print(np.allclose(m_GG[0,:,:],ED_GG[0,:,:]))
+# print('nbar',m_nb[::2])
+# print('energy',m_energy[::2])
 # print(HH_h.real)
 # print(m_GG[0,:].real)
 
